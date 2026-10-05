@@ -21,12 +21,13 @@ classDiagram
         long? LeaderMaxInPaise
         int BidCount
         uint Version
-        PlaceBid()
+        PlaceManualBid()
+        PlaceProxyBid()
         Start()
         Close()
         CancelBySeller()
         CancelByAdmin()
-        Reschedule()
+        Revise()
     }
     class Bid {
         Guid Id
@@ -66,7 +67,7 @@ Transitions live in one table on `Auction`. Any other transition throws `DomainR
 
 - `Start(now)` requires `now >= StartsAt`.
 - `Close(now)` requires `now >= EndsAt`. The result is `Sold` when there is a leader and the price meets the reserve, otherwise `Unsold`.
-- A seller can edit (`Reschedule`) only while the auction is `Scheduled`.
+- A seller can edit the terms (`Revise`) only while the auction is `Scheduled`. A start time in the past means the auction starts on the next job tick.
 
 ## Bid increments
 
@@ -102,7 +103,7 @@ Each case records one or two bids. Amounts never go down, and the last recorded 
 
 **Soft close**: if any bid was recorded and `now >= EndsAt - SoftCloseWindow`, `EndsAt` moves to `now + SoftCloseExtension`.
 
-**Outbid**: when the leader changes, the auction raises `LeaderChanged` with the previous leader, so the application can notify them.
+**Outbid**: every call returns a `BidOutcome` with the bids it recorded, whether the bidder now leads, and the previous leader if they lost the lead, so the application knows whom to notify without a separate event mechanism.
 
 ## Concurrency
 
@@ -116,7 +117,7 @@ Expected failures throw `DomainRuleViolationException` with a `DomainErrorCode`:
 
 | Code | When |
 |---|---|
-| `InvalidAuctionSchedule` | End time not after start time, or start time in the past |
+| `InvalidAuctionSchedule` | End time not after start time, or already in the past |
 | `InvalidPrice` | Starting price not positive, reserve below starting price |
 | `InvalidStatusTransition` | Lifecycle transition not in the table |
 | `AuctionNotLive` | Bid on an auction that is not `Live` |
