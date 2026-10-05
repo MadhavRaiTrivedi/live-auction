@@ -12,6 +12,13 @@ public sealed record AuctionTermsRequest(
     DateTimeOffset StartsAt,
     DateTimeOffset EndsAt)
 {
+    // PostgreSQL timestamptz only accepts UTC values from Npgsql, and clients may send any offset.
     public AuctionTerms ToTerms() =>
-        new(Title.Trim(), Description?.Trim() ?? string.Empty, StartingPriceInPaise, ReservePriceInPaise, StartsAt, EndsAt);
+        new(
+            Title.Trim(),
+            Description?.Trim() ?? string.Empty,
+            StartingPriceInPaise,
+            ReservePriceInPaise,
+            StartsAt.ToUniversalTime(),
+            EndsAt.ToUniversalTime());
 }

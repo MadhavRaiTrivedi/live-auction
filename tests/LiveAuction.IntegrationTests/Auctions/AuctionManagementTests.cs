@@ -26,6 +26,21 @@ public class AuctionManagementTests(AuctionApiFactory factory) : IClassFixture<A
     }
 
     [Fact]
+    public async Task Create_WithIndianTimeOffset_StoresTheSameInstant()
+    {
+        var seller = await AuctionClient.UserAsync(factory);
+        var startsAt = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(5.5));
+
+        var response = await seller.Http.PostAsJsonAsync(
+            "/api/auctions",
+            new { title = "Sitar", description = "", startingPriceInPaise = 10_000, startsAt, endsAt = startsAt.AddHours(1) },
+            AuctionClient.JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        (await AuctionClient.ReadAsync<AuctionResponse>(response)).StartsAt.ShouldBe(startsAt, TimeSpan.FromMilliseconds(1));
+    }
+
+    [Fact]
     public async Task Create_WithMissingTitle_ReturnsValidationProblem()
     {
         var seller = await AuctionClient.UserAsync(factory);
