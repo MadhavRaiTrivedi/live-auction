@@ -77,5 +77,16 @@ services:
     ports:
       - "18888:18888"
 
+  k6:
+    image: grafana/k6:2.3.0
+    profiles: [load-test]
+    environment:
+      BASE_URL: http://web:8080
+    volumes:
+      - ./load-tests:/scripts:ro
+    command: run /scripts/bidding.js
+    depends_on:
+      - web
+
 volumes:
   postgres-data:
