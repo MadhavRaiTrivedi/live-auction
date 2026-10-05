@@ -28,10 +28,18 @@ jobs:
         run: dotnet build LiveAuction.slnx --no-restore --configuration Release
 
       - name: Unit tests
-        run: dotnet test --project tests/LiveAuction.UnitTests --no-build --configuration Release
+        run: >
+          dotnet test --project tests/LiveAuction.UnitTests --no-build --configuration Release
+          --report-xunit-trx --results-directory TestResults
 
       - name: Integration tests
-        run: dotnet test --project tests/LiveAuction.IntegrationTests --no-build --configuration Release
+        run: >
+          dotnet test --project tests/LiveAuction.IntegrationTests --no-build --configuration Release
+          --report-xunit-trx --results-directory TestResults
+
+      - name: Annotate failed tests
+        if: failure()
+        run: python3 .github/scripts/annotate_failed_tests.py TestResults
 
   frontend:
     name: Build and test frontend
