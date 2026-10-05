@@ -150,6 +150,12 @@ docs/                            Requirements and domain model.
 
 ## Challenges and how I solved them
 
+**The configuration binder silently dropped a tier.** The first CI run failed every integration test at startup with "the last increment tier must have no upper limit", even though `appsettings.json` clearly had one. The tiers were bound straight into the domain record `BidIncrementTier(long? UpToInPaise, long IncrementInPaise)`. The binder could not construct that record for the element whose limit was `null`, and instead of failing it skipped the element, leaving two tiers. The startup validator I had added caught it, which is exactly why it exists. The fix binds to a plain settable class, [IncrementTierOptions.cs](src/LiveAuction.Application/Bidding/IncrementTierOptions.cs), and maps it to the domain record, which also keeps configuration concerns out of the domain.
+
+**`SKIP LOCKED` made my own tests flaky.** Two integration tests failed in CI with a 409 where a 422 was expected, and with a missing outbid notice. The test helper ran the start job once and assumed its auction was now live. But test classes run in parallel and each runs the start job, so another class's job could be holding the row lock on my auction at that moment, and `SKIP LOCKED` correctly skipped it. The auction was still `Scheduled`, so the arrange-step bids failed without anyone noticing. The job was behaving as designed; the test assumed exclusive access. The helper now keeps running the job until its own auction is live ([LiveAuctions.cs](tests/LiveAuction.IntegrationTests/Infrastructure/LiveAuctions.cs)), and arrange-step bids assert success so a failure points at the real cause.
+
+**Non-UTC times from clients.** Npgsql only writes `DateTimeOffset` values with a zero offset to `timestamptz`, so creating an auction with an Indian-time (`+05:30`) start time returned a 500. Request times are now converted to UTC at the boundary ([AuctionTermsRequest.cs](src/LiveAuction.Api/Auctions/AuctionTermsRequest.cs)), with an integration test that sends a `+05:30` time.
+
 **Raw lock queries and the hidden row version.** The close job loads auctions with a raw `SELECT ... FOR UPDATE SKIP LOCKED`. `SELECT *` does not return PostgreSQL system columns, but EF needs `xmin` because it is mapped as the row version. The fix is `SELECT *, xmin FROM auctions ...` in [AuctionRepository.cs](src/LiveAuction.Infrastructure/Auctions/AuctionRepository.cs), with a comment so nobody "simplifies" it away.
 
 **SignalR behind a round-robin load balancer.** The default client first sends a negotiate request and then opens the WebSocket. Behind a balancer without sticky sessions those two requests can reach different instances, and the connection fails. The client connects with `skipNegotiation: true` and WebSockets only ([auction-hub.ts](frontend/src/app/realtime/auction-hub.ts)), so a connection lives on whichever instance its single request reached.
@@ -170,7 +176,7 @@ How it will be measured: [load-tests/bidding.js](load-tests/bidding.js) creates 
 
 **Backend unit tests** (38, [tests/LiveAuction.UnitTests](tests/LiveAuction.UnitTests)): manual and proxy bidding, ties, minimum bids, soft close, seller cannot bid, bids after the end time, lifecycle transitions, cancellation rules, increment tier validation, and a check that bid sequences are gap-free and amounts never decrease.
 
-**Integration tests** (18, [tests/LiveAuction.IntegrationTests](tests/LiveAuction.IntegrationTests)), against PostgreSQL and Redis in Testcontainers through the real HTTP pipeline:
+**Integration tests** (19, [tests/LiveAuction.IntegrationTests](tests/LiveAuction.IntegrationTests)), against PostgreSQL and Redis in Testcontainers through the real HTTP pipeline:
 
 - 20 users bid the same amount at the same moment: exactly one succeeds
 - 30 users bid rising amounts at once: the stored sequence is gap-free, amounts never decrease, the price equals the last bid
@@ -179,7 +185,7 @@ How it will be measured: [load-tests/bidding.js](load-tests/bidding.js) creates 
 - A bid after the end time is rejected before the close job runs
 - Hub `Watch` returns a snapshot; a bid is pushed to watchers; the previous leader gets a private outbid notice
 - Two API hosts sharing one Redis: a bid placed on one reaches a watcher connected to the other
-- Reserve visible only to the seller, validation errors, search, ownership checks, cancellation rules
+- Reserve visible only to the seller, validation errors, search, ownership checks, cancellation rules, times sent with a non-UTC offset
 
 **Frontend unit tests** (14, Vitest): state merging (stale and duplicate updates, late HTTP responses), server clock offset, countdown formatting, money conversion, session restore.
 
