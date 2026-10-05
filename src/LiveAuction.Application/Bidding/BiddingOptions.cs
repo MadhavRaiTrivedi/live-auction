@@ -6,7 +6,7 @@ public sealed class BiddingOptions
 {
     public const string SectionName = "Bidding";
 
-    public BidIncrementTier[] IncrementTiers { get; init; } = [];
+    public IncrementTierOptions[] IncrementTiers { get; init; } = [];
 
     public TimeSpan SoftCloseWindow { get; init; } = TimeSpan.FromSeconds(30);
 
@@ -15,5 +15,8 @@ public sealed class BiddingOptions
     public int MaxConcurrencyAttempts { get; init; } = 5;
 
     public BiddingRules ToRules() =>
-        new(new BidIncrementTable(IncrementTiers), SoftCloseWindow, SoftCloseExtension);
+        new(
+            new BidIncrementTable(IncrementTiers.Select(tier => new BidIncrementTier(tier.UpToInPaise, tier.IncrementInPaise))),
+            SoftCloseWindow,
+            SoftCloseExtension);
 }
