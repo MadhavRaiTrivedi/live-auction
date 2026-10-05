@@ -30,9 +30,10 @@ internal sealed class AuctionClient(HttpClient http, Guid userId, string accessT
     public Task<HttpResponseMessage> CreateAuctionAsync(
         long startingPriceInPaise = 10_000,
         long? reservePriceInPaise = null,
-        TimeSpan? duration = null)
+        TimeSpan? duration = null,
+        TimeSpan? startsIn = null)
     {
-        var startsAt = DateTimeOffset.UtcNow;
+        var startsAt = DateTimeOffset.UtcNow + (startsIn ?? TimeSpan.Zero);
         return Http.PostAsJsonAsync(
             "/api/auctions",
             new

@@ -45,7 +45,7 @@ public class BiddingTests(AuctionApiFactory factory) : IClassFixture<AuctionApiF
         var seller = await AuctionClient.UserAsync(factory);
         var bidder = await AuctionClient.UserAsync(factory);
         var created = await AuctionClient.ReadAsync<AuctionResponse>(
-            await seller.CreateAuctionAsync());
+            await seller.CreateAuctionAsync(startsIn: TimeSpan.FromHours(1)));
 
         var response = await bidder.BidAsync(created.Id, 10_000);
 
