@@ -1,0 +1,29 @@
+<section class="card narrow">
+  <h1>Sign in</h1>
+  <p class="muted">
+    This demo has no identity provider. The API issues a development token for the role you pick.
+    Open a second browser window and sign in as another user to bid against yourself.
+  </p>
+
+  <form [formGroup]="form" (ngSubmit)="signIn()" class="stack">
+    <label>
+      Role
+      <select formControlName="role">
+        @for (role of roles; track role) {
+          <option [value]="role">{{ role }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      User id <span class="muted">(optional, a new one is generated if empty)</span>
+      <input formControlName="userId" placeholder="e.g. 3f2b8c1e-..." />
+    </label>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+
+    <button type="submit" [disabled]="isSubmitting()">Sign in</button>
+  </form>
+</section>

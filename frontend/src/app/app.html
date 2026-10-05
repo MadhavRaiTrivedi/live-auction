@@ -1,0 +1,45 @@
+<nav class="topbar">
+  <a routerLink="/" class="brand">Live Auction</a>
+  @if (session.current(); as user) {
+    <a routerLink="/auctions" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      Auctions
+    </a>
+    <a routerLink="/auctions/new" routerLinkActive="active">Sell</a>
+    <a routerLink="/me" routerLinkActive="active">My activity</a>
+    <span class="spacer"></span>
+    @if (hub.status() !== ConnectionStatus.Connected) {
+      <span class="badge warning" title="Prices may be out of date until reconnected">
+        Live updates
+        {{ hub.status() === ConnectionStatus.Reconnecting ? 'reconnecting' : 'offline' }}
+      </span>
+    }
+    <span class="muted small">{{ user.role }} · {{ user.userId }}</span>
+    <button type="button" class="secondary" (click)="signOut()">Sign out</button>
+  }
+</nav>
+
+<main>
+  <router-outlet />
+</main>
+
+<aside class="toasts" aria-live="assertive">
+  @for (notice of hub.outbidNotices(); track notice) {
+    <div class="toast" role="alert">
+      <span>
+        You were outbid on
+        <a [routerLink]="['/auctions', notice.auctionId]" (click)="hub.dismissNotice(notice)">{{
+          notice.title
+        }}</a
+        >. Price is now {{ notice.currentPriceInPaise | paise }}.
+      </span>
+      <button
+        type="button"
+        class="secondary"
+        (click)="hub.dismissNotice(notice)"
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  }
+</aside>

@@ -1,0 +1,58 @@
+<header class="page-header row spread">
+  <h1>Auctions</h1>
+  <a class="button" routerLink="/auctions/new">Sell an item</a>
+</header>
+
+<form [formGroup]="searchForm" (ngSubmit)="search()" class="row search">
+  <input formControlName="search" placeholder="Search by title" aria-label="Search by title" />
+  <button type="submit" class="secondary">Search</button>
+</form>
+
+<div class="tabs" role="tablist">
+  @for (tab of tabs; track tab.label) {
+    <button
+      type="button"
+      role="tab"
+      [class.active]="activeStatus() === tab.status"
+      [attr.aria-selected]="activeStatus() === tab.status"
+      (click)="selectStatus(tab.status)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
+
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+
+<div class="grid">
+  @for (auction of auctions(); track auction.id) {
+    <a class="card auction-card" [routerLink]="['/auctions', auction.id]">
+      <span class="badge" [attr.data-status]="auction.status">{{ auction.status }}</span>
+      <strong>{{ auction.title }}</strong>
+      <span class="amount">{{ auction.priceInPaise | paise }}</span>
+      <span class="muted small">
+        {{ auction.bidCount }} bids ·
+        @if (auction.status === AuctionStatus.Scheduled) {
+          starts {{ auction.startsAt | date: 'medium' }}
+        } @else {
+          ends {{ auction.endsAt | date: 'medium' }}
+        }
+      </span>
+    </a>
+  } @empty {
+    @if (!isLoading()) {
+      <section class="card">
+        <p>No auctions match.</p>
+        <p class="muted">Create one with <a routerLink="/auctions/new">Sell an item</a>.</p>
+      </section>
+    }
+  }
+</div>
+
+@if (isLoading()) {
+  <p class="muted">Loading auctions…</p>
+} @else if (hasMore()) {
+  <button type="button" class="secondary load-more" (click)="loadMore()">Load more</button>
+}

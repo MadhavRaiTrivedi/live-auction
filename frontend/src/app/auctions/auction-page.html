@@ -1,0 +1,155 @@
+<a routerLink="/auctions" class="back">← All auctions</a>
+
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+
+@if (auction(); as auction) {
+  <header class="page-header">
+    <h1>
+      {{ auction.title }}
+      <span class="badge" [attr.data-status]="auction.status">{{ auction.status }}</span>
+    </h1>
+    @if (auction.isSeller) {
+      <p class="muted">You are selling this item.</p>
+    }
+  </header>
+
+  @if (liveError()) {
+    <p class="error" role="alert">{{ liveError() }}</p>
+  }
+
+  <div class="columns">
+    <section class="card stack">
+      <div class="price-panel">
+        <span class="muted">{{ auction.bidCount === 0 ? 'Starting price' : 'Current price' }}</span>
+        <strong class="price" aria-live="polite">
+          {{ auction.currentPriceInPaise ?? auction.startingPriceInPaise | paise }}
+        </strong>
+        <span class="muted small">
+          {{ auction.bidCount }} bids
+          @if (auction.leadingBidderAlias) {
+            · leading: {{ auction.isLeading ? 'you' : auction.leadingBidderAlias }}
+          }
+        </span>
+      </div>
+
+      @switch (auction.status) {
+        @case (AuctionStatus.Live) {
+          <p class="countdown" [class.closing-soon]="isClosingSoon()">
+            Ends in <strong>{{ countdown() }}</strong>
+            <span class="muted small">({{ auction.endsAt | date: 'medium' }})</span>
+          </p>
+        }
+        @case (AuctionStatus.Scheduled) {
+          <p>Starts {{ auction.startsAt | date: 'medium' }}</p>
+        }
+        @case (AuctionStatus.Sold) {
+          <p class="success">
+            Sold for {{ auction.currentPriceInPaise | paise }}
+            {{ auction.isLeading ? 'to you.' : '' }}
+          </p>
+        }
+        @case (AuctionStatus.Unsold) {
+          <p class="muted">
+            Ended without a sale{{ auction.bidCount > 0 ? ': the reserve was not met.' : '.' }}
+          </p>
+        }
+        @case (AuctionStatus.Cancelled) {
+          <p class="error">This auction was cancelled.</p>
+        }
+      }
+
+      @if (auction.hasReserve) {
+        <p
+          class="small"
+          [class.success]="auction.isReserveMet"
+          [class.muted]="!auction.isReserveMet"
+        >
+          {{ auction.isReserveMet ? 'Reserve met' : 'Reserve not met yet' }}
+          @if (auction.reservePriceInPaise !== null) {
+            (reserve {{ auction.reservePriceInPaise | paise }})
+          }
+        </p>
+      }
+
+      @if (canBid()) {
+        @if (auction.isLeading) {
+          <p class="success">
+            You are the highest bidder.
+            @if (auction.yourMaxBidInPaise) {
+              Your maximum is {{ auction.yourMaxBidInPaise | paise }}.
+            }
+          </p>
+        }
+
+        <form [formGroup]="bidForm" (ngSubmit)="placeBid()" class="stack">
+          <label>
+            Your bid (₹)
+            <span class="muted small">Minimum {{ auction.minimumNextBidInPaise | paise }}</span>
+            <input type="number" step="0.01" formControlName="amountInRupees" />
+          </label>
+          <button type="submit" [disabled]="isSubmitting() || bidForm.invalid || auction.isLeading">
+            Place bid
+          </button>
+        </form>
+
+        <form [formGroup]="proxyForm" (ngSubmit)="placeProxyBid()" class="stack">
+          <label>
+            Automatic bidding up to (₹)
+            <span class="muted small">
+              The system bids for you, one step at a time, only as far as needed.
+            </span>
+            <input type="number" step="0.01" formControlName="maxInRupees" />
+          </label>
+          <button type="submit" class="secondary" [disabled]="isSubmitting() || proxyForm.invalid">
+            Set maximum bid
+          </button>
+        </form>
+      }
+
+      @if (bidMessage()) {
+        <p class="success" role="status">{{ bidMessage() }}</p>
+      }
+      @if (bidError()) {
+        <p class="error" role="alert">{{ bidError() }}</p>
+      }
+
+      @if (canEdit() || canCancel()) {
+        <div class="row">
+          @if (canEdit()) {
+            <a class="button secondary" [routerLink]="['/auctions', auction.id, 'edit']">Edit</a>
+          }
+          @if (canCancel()) {
+            <button type="button" class="danger" (click)="cancel()">Cancel auction</button>
+          }
+        </div>
+      }
+
+      @if (auction.description) {
+        <p class="description">{{ auction.description }}</p>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Bid history</h2>
+      @for (bid of state()?.bids; track bid.sequence) {
+        <div class="list-item" [class.own]="bid.bidderAlias === auction.yourAlias">
+          <span>
+            {{ bid.bidderAlias === auction.yourAlias ? 'You' : bid.bidderAlias }}
+            @if (bid.kind !== BidKind.Manual) {
+              <span class="badge">{{ bid.kind === BidKind.Auto ? 'automatic' : 'proxy' }}</span>
+            }
+            <br />
+            <span class="muted small">{{ bid.placedAt | date: 'mediumTime' }}</span>
+          </span>
+          <strong>{{ bid.amountInPaise | paise }}</strong>
+        </div>
+      } @empty {
+        <p class="muted">No bids yet.</p>
+      }
+    </section>
+  </div>
+} @else if (!error()) {
+  <p class="muted">Loading auction…</p>
+}

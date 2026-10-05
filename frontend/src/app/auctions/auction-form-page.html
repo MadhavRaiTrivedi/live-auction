@@ -1,0 +1,55 @@
+<a [routerLink]="id() ? ['/auctions', id()] : '/auctions'" class="back">← Back</a>
+
+<section class="card narrow wide">
+  <h1>{{ id() ? 'Edit auction' : 'Sell an item' }}</h1>
+  <p class="muted">
+    The auction goes live at the start time. You can edit it until then. A bid in the last 30
+    seconds extends the end time, so other bidders get a chance to respond.
+  </p>
+
+  <form [formGroup]="form" (ngSubmit)="save()" class="stack">
+    <label>
+      Title
+      <input formControlName="title" [maxlength]="maxTitleLength" />
+    </label>
+
+    <label>
+      Description
+      <textarea
+        formControlName="description"
+        rows="4"
+        [maxlength]="maxDescriptionLength"
+      ></textarea>
+    </label>
+
+    <div class="row">
+      <label>
+        Starting price (₹)
+        <input type="number" step="0.01" formControlName="startingPriceInRupees" />
+      </label>
+      <label>
+        Reserve price (₹) <span class="muted small">optional, hidden from bidders</span>
+        <input type="number" step="0.01" formControlName="reservePriceInRupees" />
+      </label>
+    </div>
+
+    <div class="row">
+      <label>
+        Starts
+        <input type="datetime-local" formControlName="startsAt" />
+      </label>
+      <label>
+        Ends
+        <input type="datetime-local" formControlName="endsAt" />
+      </label>
+    </div>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+
+    <button type="submit" [disabled]="isSubmitting() || form.invalid">
+      {{ id() ? 'Save changes' : 'Create auction' }}
+    </button>
+  </form>
+</section>
