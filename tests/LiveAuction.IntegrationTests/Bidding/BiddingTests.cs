@@ -16,7 +16,7 @@ public class BiddingTests(AuctionApiFactory factory) : IClassFixture<AuctionApiF
         var bidder = await AuctionClient.UserAsync(factory);
         var auction = await LiveAuctions.OpenAsync(factory, seller, startingPriceInPaise: 10_000);
 
-        var placed = await AuctionClient.ReadAsync<PlaceBidResponse>(await bidder.BidAsync(auction.Id, 10_000));
+        var placed = await bidder.PlaceBidAsync(auction.Id, 10_000);
 
         placed.IsLeading.ShouldBeTrue();
         placed.Auction.MinimumNextBidInPaise.ShouldBe(11_000);

@@ -78,7 +78,7 @@ public class AuctionManagementTests(AuctionApiFactory factory) : IClassFixture<A
         var bidder = await AuctionClient.UserAsync(factory);
         var admin = await AuctionClient.AdminAsync(factory);
         var auction = await LiveAuctions.OpenAsync(factory, seller);
-        await bidder.BidAsync(auction.Id, auction.MinimumNextBidInPaise);
+        await bidder.PlaceBidAsync(auction.Id, auction.MinimumNextBidInPaise);
 
         var bySeller = await seller.CancelAsync(auction.Id);
         var byAdmin = await admin.CancelAsync(auction.Id);

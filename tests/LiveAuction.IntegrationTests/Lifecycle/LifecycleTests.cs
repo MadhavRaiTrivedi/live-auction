@@ -15,7 +15,7 @@ public class LifecycleTests(AuctionApiFactory factory) : IClassFixture<AuctionAp
         var seller = await AuctionClient.UserAsync(factory);
         var bidder = await AuctionClient.UserAsync(factory);
         var auction = await LiveAuctions.OpenAsync(factory, seller, 10_000, reservePriceInPaise: 15_000, ShortAuction);
-        await bidder.BidAsync(auction.Id, 15_000);
+        await bidder.PlaceBidAsync(auction.Id, 15_000);
 
         await WaitUntilEndedAsync(seller, auction.Id);
         await factory.CloseEndedAuctionsAsync();

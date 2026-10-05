@@ -51,6 +51,9 @@ internal sealed class AuctionClient(HttpClient http, Guid userId, string accessT
     public Task<HttpResponseMessage> BidAsync(Guid auctionId, long amountInPaise) =>
         Http.PostAsJsonAsync($"/api/auctions/{auctionId}/bids", new { amountInPaise }, JsonOptions);
 
+    public async Task<PlaceBidResponse> PlaceBidAsync(Guid auctionId, long amountInPaise) =>
+        await ReadAsync<PlaceBidResponse>(await BidAsync(auctionId, amountInPaise));
+
     public Task<HttpResponseMessage> ProxyBidAsync(Guid auctionId, long maxAmountInPaise) =>
         Http.PostAsJsonAsync($"/api/auctions/{auctionId}/proxy-bids", new { maxAmountInPaise }, JsonOptions);
 
