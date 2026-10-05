@@ -6,4 +6,8 @@ public sealed record AuctionTerms(
     long StartingPriceInPaise,
     long? ReservePriceInPaise,
     DateTimeOffset StartsAt,
-    DateTimeOffset EndsAt);
+    DateTimeOffset EndsAt)
+{
+    public const int MaxTitleLength = 120;
+    public const int MaxDescriptionLength = 4000;
+}

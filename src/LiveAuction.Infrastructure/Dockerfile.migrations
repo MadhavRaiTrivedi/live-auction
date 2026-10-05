@@ -1,0 +1,24 @@
+# Builds an EF Core migration bundle: a single executable that applies pending migrations and exits.
+# Running it as its own container keeps schema changes out of the API's startup path, which matters
+# here because several API instances start at the same time.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY global.json Directory.Build.props Directory.Packages.props .editorconfig dotnet-tools.json ./
+COPY src/LiveAuction.Domain/LiveAuction.Domain.csproj src/LiveAuction.Domain/
+COPY src/LiveAuction.Application/LiveAuction.Application.csproj src/LiveAuction.Application/
+COPY src/LiveAuction.Infrastructure/LiveAuction.Infrastructure.csproj src/LiveAuction.Infrastructure/
+RUN dotnet tool restore && dotnet restore src/LiveAuction.Infrastructure/LiveAuction.Infrastructure.csproj
+
+COPY src/ src/
+RUN dotnet ef migrations bundle \
+    --project src/LiveAuction.Infrastructure \
+    --startup-project src/LiveAuction.Infrastructure \
+    --configuration Release \
+    --output /app/efbundle
+
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/efbundle .
+USER $APP_UID
+ENTRYPOINT ["sh", "-c", "./efbundle --connection \"$ConnectionStrings__Auctions\""]
